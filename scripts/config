@@ -3,11 +3,14 @@
 import yaml
 import re
 import os.path
+import subprocess
 from os import environ, getenv, getcwd
 from html.parser import HTMLParser
 from urllib.request import urlopen
 from collections import OrderedDict, Counter
 from yaml.resolver import BaseResolver
+import urllib.request
+import base64
 
 class AndroidImagesParser(HTMLParser):
 
@@ -72,20 +75,48 @@ if __name__ == "__main__":
 
     config_file='%s/config.yml' % getcwd()
     with open(config_file, encoding='utf-8') as data_file:
-        config = yaml.load(data_file.read())
+        config = yaml.load(data_file.read(), Loader=yaml.FullLoader)
 
-    url = "https://developers.google.com/android/images"
-    html = urlopen(url).read()
-    parser = AndroidImagesParser(config)
-    parser.images = {}
-    parser.feed(str(html))
+    all_tags = []
+    platform_build_url = "https://android.googlesource.com/platform/build"
+    tag_filter = "android-{}".format(config['version'])
+    process = subprocess.run(["git", "ls-remote", "--refs", "--tags", "--sort=v:refname", platform_build_url], capture_output=True)
+    for line in process.stdout.split(b'\n'):
+        tag = line.decode().split('/')[-1]
+        if tag_filter in tag:
+            all_tags.append(tag)
+    latest_tags = all_tags[-5:]
+
+    build_id_tags = {}
+    build_id_git_url = "https://android.googlesource.com/platform/build/+/refs/tags/{}/core/build_id.mk?format=TEXT"
+    build_id_filter = "BUILD_ID="
+    for tag in latest_tags:
+        output = base64.decodebytes(urllib.request.urlopen(build_id_git_url.format(tag)).read()).decode()
+        for line in output.split('\n'):
+            if build_id_filter in line:
+                build_id = line.split(build_id_filter)[1]
+                build_id_tags[build_id] = tag
+
+    image_url = "https://developers.google.com/android/images"
+    image_html = urlopen(image_url).read()
+    image_parser = AndroidImagesParser(config)
+    image_parser.images = {}
+    image_parser.feed(str(image_html))
 
     for device in config['devices']:
-        for variant, values in parser.images[device].items():
+        for variant, values in image_parser.images[device].items():
             for key, value in values.items():
                 config['devices'].setdefault(
                     device,{}
                 )[key] = value
+
+            # TODO: i'm guessing we want to support all variants?
+            if variant == "global":
+                factory_build = values['factory_build']
+                if factory_build in build_id_tags:
+                    config['devices'].setdefault(device, {})['platform_ref'] = build_id_tags[factory_build]
+                else:
+                    print("Unable to find latest build tag for factory build {} for device {}".format(factory_build, device))
 
     with open(config_file, 'w') as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
