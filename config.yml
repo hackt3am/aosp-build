@@ -5,8 +5,8 @@ variant: user
 datetime: 1567667515
 host: android
 user: build
+build_kernel: false
 platform:
-  ref: android-10.0.0_r2
   extra_remotes:
   - name: github
     fetch: https://github.com

@@ -54,6 +54,7 @@ RUN \
         python3 \
         python3-git \
         python3-yaml \
+        python-protobuf \
         rsync \
         schedtool \
         squashfs-tools \

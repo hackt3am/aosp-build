@@ -33,11 +33,11 @@ image:
 		-t $(image) .
 
 .PHONY: manifest
-manifest:
+manifest: config
 	$(contain) manifest
 
 .PHONY: config
-config: manifest
+config:
 	$(contain) config
 
 .PHONY: fetch

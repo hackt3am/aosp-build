@@ -160,6 +160,12 @@ if __name__ == "__main__":
     with open(config_file, encoding='utf-8') as data_file:
         config = yaml.load(data_file.read())
 
+    device_env = 'DEVICE'
+    if device_env not in environ.keys():
+        print("need to provide environment variable {}".format(device_env))
+        exit(1)
+    device = environ[device_env]
+
     path="%s/manifests" % getcwd()
     makedirs(path, exist_ok=True)
 
@@ -177,7 +183,7 @@ if __name__ == "__main__":
             kernel_names.append(kernel_name)
 
     manifest = AndroidManifest(
-        ref=config['platform']['ref'],
+        ref=config['devices'][device]['platform_ref'],
         extra_remotes = config.get('platform',{}).get('extra_remotes',[]),
         extra_projects = config.get('platform',{}).get('extra_projects',[]),
         remove_paths = config.get('platform',{}).get('remove_paths',[]),
