@@ -1,4 +1,3 @@
-CPUS := "2"
 device = ${DEVICE}
 userid = $(shell id -u)
 groupid = $(shell id -g)
@@ -18,7 +17,6 @@ contain := \
 		-v $(PWD)/patches:/home/build/patches \
 		-u $(userid):$(groupid) \
 		-e DEVICE=$(device) \
-		--cpus $(CPUS) \
 		$(image)
 
 .DEFAULT_GOAL := default
